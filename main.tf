@@ -17,12 +17,12 @@ terraform {
 ###
 
 resource "aws_security_group" "elb_in" {
-  name      = var.name-sg-elb-in
+  name      = var.app_name
   description = "Allow specified traffic ingress to ELB"
 
-  tags = local.tag_list
+  #tags = local.tag_list
 
-  dynamic ingress {
+  dynamic "ingress" {
     for_each = var.elb_ports_in
     content {
       from_port   = ingress.port
@@ -35,12 +35,12 @@ resource "aws_security_group" "elb_in" {
 }
 
 resource "aws_security_group" "elb_out" {
-  name      = var.name-sg-elb-out
+  name      = var.app_name
   description = "Allow specified traffic egress from ELB"
 
-  tags = local.tag_list
+  #tags = local.tag_list
 
-    dynamic egress {
+    dynamic "egress" {
     for_each = var.elb_ports_out
     content {
       from_port   = egress.port
@@ -53,12 +53,12 @@ resource "aws_security_group" "elb_out" {
 }
 
 resource "aws_security_group" "backend_in" {
-  name      = var.name-sg-backend-in
+  name      = var.app_name
   description = "Allow specified trffic ingress to Backend"
 
-  tags = local.tag_list
+  #tags = local.tag_list
 
-  dynamic ingress {
+  dynamic "ingress" {
     for_each = var.backend_ports_in
     content {
       from_port   = ingress.port
@@ -71,12 +71,12 @@ resource "aws_security_group" "backend_in" {
 }
 
 resource "aws_security_group" "backend_out" {
-  name      = var.name-sg-backend-out
+  name      = var.app_name
   description = "Allow specified trffic egress from Backend"
 
-  tags = local.tag_list
+  #tags = local.tag_list
 
-  dynamic egress {
+  dynamic "egress" {
     for_each = var.backend_ports_out
     content {
       from_port   = egress.port
@@ -102,7 +102,7 @@ resource "aws_security_group_rule" "allow-ssh" {
   protocol = "tcp"
   cidr_blocks = [ var.enable_ssh_prefix ]
 
-  security_group_id = aws.aws_security_group.backend_in.id
+  security_group_id = aws_security_group.backend_in.id
 }
 
 
@@ -114,14 +114,14 @@ module "asg" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "~> 3.0"
   
-  name = var.name
+  name = var.app_name
 
   # Launch configuration
-  lc_name = var.name
+  lc_name = var.app_name
 
   image_id        = data.aws_ami.this.id
   instance_type   = var.instance_type
-  security_groups = [aws.aws_security_group.backend_in,aws.aws_security_group.backend_out]
+  security_groups = [aws_security_group.backend_in,aws_security_group.backend_out]
 
   # Auto scaling group
   asg_name                  = var.app_name
@@ -132,7 +132,7 @@ module "asg" {
   desired_capacity          = var.desired_size
   wait_for_capacity_timeout = 0
   
-  tags = local.tag_list
+  #tags = local.tag_list
 
 }
 
@@ -141,12 +141,12 @@ module "asg" {
 ######
 module "elb" {
   source = "terraform-aws-modules/elb/aws"
-  version = "~> 3.8.0"
+  version = "~> 2.4.0"
 
-  name = var.name
+  name = var.app_name
 
   subnets         = data.aws_subnet_ids.public.ids
-  security_groups = [aws.aws_security_group.elb_in,aws.aws_security_group.elb_out]
+  security_groups = [aws_security_group.elb_in,aws_security_group.elb_out]
   internal        = false
 
   listener = [
