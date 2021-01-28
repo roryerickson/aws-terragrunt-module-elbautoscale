@@ -117,6 +117,6 @@ variable "enable_ssh_prefix" {
 
 variable "tag_list" {
   description = "List of tags to apply"
-  type = map()
+  type = map(string)
 }
 
